@@ -6,16 +6,16 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mybestlocation.Config;
 import com.example.mybestlocation.JSONParser;
 import com.example.mybestlocation.Position;
+import com.example.mybestlocation.PositionAdapter;
 import com.example.mybestlocation.databinding.FragmentHomeBinding;
 
 import org.json.JSONArray;
@@ -23,23 +23,26 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class HomeFragment extends Fragment {
-    ArrayList<Position> data= new ArrayList<Position>();
-
     private FragmentHomeBinding binding;
+    private List<Position> data = new ArrayList<>();
+    private PositionAdapter adapter;
 
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
-
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        binding.btnDownload.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                    Download d= new Download();
-                    d.execute();
-            }
+
+        // Initialize RecyclerView
+        binding.recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new PositionAdapter(data, getActivity());  // Passing the context here
+        binding.recyclerView.setAdapter(adapter);
+
+        binding.btnDownload.setOnClickListener(view -> {
+            DownloadTask downloadTask = new DownloadTask();
+            downloadTask.execute();
         });
 
         return root;
@@ -51,62 +54,59 @@ public class HomeFragment extends Fragment {
         binding = null;
     }
 
-    class Download extends AsyncTask {
-
-        AlertDialog alert ;
+    class DownloadTask extends AsyncTask<Void, Void, Void> {
+        AlertDialog alert;
 
         @Override
         protected void onPreExecute() {
             AlertDialog.Builder dialog = new AlertDialog.Builder(getActivity());
-            dialog.setTitle("Telechargement");
-            dialog.setMessage("Veiller patientez...");
-
-            alert= dialog.create();
+            dialog.setTitle("Download");
+            dialog.setMessage("Please wait...");
+            alert = dialog.create();
             alert.show();
         }
 
         @Override
-        protected Object doInBackground(Object[] objects) {
-
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            //code du second thread : pas acces a l'IHM
+        protected Void doInBackground(Void... voids) {
             JSONParser parser = new JSONParser();
             JSONObject response = parser.makeRequest(Config.Url_GetAll);
-            System.out.println(response);
 
-            try {
-                int success= response.getInt("success");
-                if (success>0)
-                {
-                    JSONArray tab= response.getJSONArray("positions");
-                    for (int i = 0; i < tab.length(); i++) {
-                        JSONObject lignes = tab.getJSONObject(i);
-                        int idposition= lignes.getInt("idposition");
-                        String pseudo = lignes.getString("pseudo");
-                        String longitude = lignes.getString("longitude");
-                        String latitude = lignes.getString("latitude");
+            if (response != null) {
+                try {
+                    int success = response.getInt("success");
+                    if (success > 0) {
+                        JSONArray tab = response.getJSONArray("positions");
 
-                        data.add(new Position(idposition, pseudo, longitude, latitude));
+                        // Clear existing data to avoid duplicates
+                        data.clear();
+
+                        for (int i = 0; i < tab.length(); i++) {
+                            JSONObject lignes = tab.getJSONObject(i);
+                            int idposition = lignes.getInt("idposition");
+                            String pseudo = lignes.getString("pseudo");
+                            String longitude = lignes.getString("longitude");
+                            String latitude = lignes.getString("latitude");
+
+                            if (longitude != null && latitude != null) {
+                                data.add(new Position(idposition, pseudo, longitude, latitude));
+                            }
+                        }
+                    } else {
+                        // Handle unsuccessful response here
                     }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    // Optionally show a message to the user about the error
                 }
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
+            } else {
+                // Handle case where response is null (e.g., no internet)
             }
-
             return null;
         }
 
         @Override
-        protected void onPostExecute(Object o) {
-            binding.lv.setAdapter(new ArrayAdapter(
-                    getActivity(),
-                    android.R.layout.simple_list_item_1,
-                    data
-                    ));
+        protected void onPostExecute(Void result) {
+            adapter.notifyDataSetChanged();
             alert.dismiss();
         }
     }

@@ -1,0 +1,22 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/tvPseudo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Pseudo"
+        android:textStyle="bold"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/tvCoordinates"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Coordinates: (latitude, longitude)"
+        android:textSize="14sp" />
+
+</LinearLayout>
