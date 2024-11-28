@@ -14,52 +14,82 @@ import androidx.fragment.app.Fragment;
 
 import com.example.mybestlocation.Config;
 import com.example.mybestlocation.JSONParser;
+import com.example.mybestlocation.R;
 import com.example.mybestlocation.databinding.FragmentGalleryBinding;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
 
-public class GalleryFragment extends Fragment {
+public class GalleryFragment extends Fragment implements OnMapReadyCallback {
     private FragmentGalleryBinding binding;
+    private GoogleMap mMap;
+    private LatLng selectedPosition; // Holds the selected position
+    private EditText inputPseudo; // Input field for pseudo
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentGalleryBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        // Initialize pseudo input field
+        inputPseudo = root.findViewById(R.id.input_pseudo);
+
+        // Initialize the map
+        SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(this);
+        }
+
         // Set click listener for the "Add Position" button
         binding.btnAddPosition.setOnClickListener(view -> {
-            String pseudo = binding.inputPseudo.getText().toString();
-            String latitude = binding.inputLatitude.getText().toString();
-            String longitude = binding.inputLongitude.getText().toString();
-
-            if (pseudo.isEmpty() || latitude.isEmpty() || longitude.isEmpty()) {
-                Toast.makeText(getContext(), "All fields are required!", Toast.LENGTH_SHORT).show();
+            String pseudo = inputPseudo.getText().toString();
+            if (pseudo.isEmpty()) {
+                Toast.makeText(getContext(), "Please enter a pseudo!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // Validate latitude and longitude format
-            try {
-                double lat = Double.parseDouble(latitude);
-                double lon = Double.parseDouble(longitude);
+            if (selectedPosition != null) {
+                String latitude = String.valueOf(selectedPosition.latitude);
+                String longitude = String.valueOf(selectedPosition.longitude);
 
-                if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-                    Toast.makeText(getContext(), "Invalid latitude or longitude values!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            } catch (NumberFormatException e) {
-                Toast.makeText(getContext(), "Latitude and Longitude must be numbers!", Toast.LENGTH_SHORT).show();
-                return;
+                // Start task to add the position
+                AddPositionTask task = new AddPositionTask(pseudo, latitude, longitude);
+                task.execute();
+            } else {
+                Toast.makeText(getContext(), "Please select a position on the map!", Toast.LENGTH_SHORT).show();
             }
-
-            // Start task to add the position
-            AddPositionTask task = new AddPositionTask(pseudo, latitude, longitude);
-            task.execute();
         });
 
         return root;
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+
+        // Set initial camera position (centered on a default location, e.g., Paris)
+        LatLng defaultLocation = new LatLng(48.8566, 2.3522); // Paris
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 10));
+
+        // Add a click listener to place a marker
+        mMap.setOnMapClickListener(latLng -> {
+            // Clear previous markers
+            mMap.clear();
+
+            // Add a marker at the clicked position
+            mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Position"));
+
+            // Save the selected position
+            selectedPosition = latLng;
+        });
     }
 
     @Override
@@ -111,10 +141,10 @@ public class GalleryFragment extends Fragment {
 
                     if (success == 1) {
                         Toast.makeText(getContext(), "Position added successfully: " + message, Toast.LENGTH_SHORT).show();
-                        // Optionally, clear the inputs
-                        binding.inputPseudo.setText("");
-                        binding.inputLatitude.setText("");
-                        binding.inputLongitude.setText("");
+                        // Clear inputs
+                        inputPseudo.setText("");
+                        selectedPosition = null;
+                        mMap.clear(); // Clear the marker from the map
                     } else {
                         Toast.makeText(getContext(), "Failed to add position: " + message, Toast.LENGTH_SHORT).show();
                     }

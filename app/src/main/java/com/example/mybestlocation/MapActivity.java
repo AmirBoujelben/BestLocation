@@ -32,11 +32,17 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
+        if (googleMap != null) {
+            mMap = googleMap;
 
-        // Move the camera to the selected position and add a marker
-        LatLng position = new LatLng(latitude, longitude);
-        mMap.addMarker(new MarkerOptions().position(position).title("Position"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 10));
+            // Définir la position et ajouter un marqueur
+            LatLng position = new LatLng(latitude, longitude);
+            mMap.addMarker(new MarkerOptions().position(position).title("Position"));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 10));
+        } else {
+            // Optionnel : Gérer le cas où GoogleMap est null
+            throw new IllegalStateException("Erreur lors de l'initialisation de Google Map !");
+        }
     }
+
 }

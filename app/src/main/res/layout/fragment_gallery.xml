@@ -1,52 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    tools:context=".ui.gallery.GalleryFragment">
 
-    <!-- Input for Pseudo -->
+    <!-- Pseudo Input -->
     <EditText
-        android:id="@+id/inputPseudo"
+        android:id="@+id/input_pseudo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Pseudo"
+        android:hint="Enter pseudo"
         android:inputType="text"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"
+        android:padding="8dp" />
 
-    <!-- Input for Latitude -->
-    <EditText
-        android:id="@+id/inputLatitude"
+    <!-- Map View -->
+    <FrameLayout
+        android:id="@+id/map_container"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:hint="Latitude"
-        android:inputType="numberDecimal"
-        app:layout_constraintTop_toBottomOf="@id/inputPseudo"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/input_pseudo"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_chainStyle="packed" />
+        app:layout_constraintBottom_toTopOf="@id/btnAddPosition">
 
-    <!-- Input for Longitude -->
-    <EditText
-        android:id="@+id/inputLongitude"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:hint="Longitude"
-        android:inputType="numberDecimal"
-        app:layout_constraintTop_toBottomOf="@id/inputLatitude"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/map"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
-    <!-- Add Position Button -->
+    <!-- Button to Add Position -->
     <Button
         android:id="@+id/btnAddPosition"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Add Position"
-        app:layout_constraintTop_toBottomOf="@id/inputLongitude"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="16dp" />
 </androidx.constraintlayout.widget.ConstraintLayout>
