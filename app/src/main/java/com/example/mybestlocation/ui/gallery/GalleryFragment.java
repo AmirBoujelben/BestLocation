@@ -1,5 +1,6 @@
 package com.example.mybestlocation.ui.gallery;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -28,11 +29,22 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
+
+import android.app.AlertDialog;
+import android.telephony.SmsManager;
+import android.view.Gravity;
+import android.widget.Button;
+import android.widget.EditText;
+
 public class GalleryFragment extends Fragment implements OnMapReadyCallback {
     private FragmentGalleryBinding binding;
+    private FusedLocationProviderClient fusedLocationClient;
     private GoogleMap mMap;
     private LatLng selectedPosition; // Holds the selected position
-    private EditText inputPseudo; // Input field for pseudo
+    private EditText inputPseudo;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -47,6 +59,9 @@ public class GalleryFragment extends Fragment implements OnMapReadyCallback {
         if (mapFragment != null) {
             mapFragment.getMapAsync(this);
         }
+
+        // Initialize the location client
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
         // Set click listener for the "Add Position" button
         binding.btnAddPosition.setOnClickListener(view -> {
@@ -67,19 +82,32 @@ public class GalleryFragment extends Fragment implements OnMapReadyCallback {
                 Toast.makeText(getContext(), "Please select a position on the map!", Toast.LENGTH_SHORT).show();
             }
         });
+        // "Send SMS to Friend" button logic
+        binding.btnSendSms.setOnClickListener(v -> showSmsPopup());
 
         return root;
     }
 
+    @SuppressLint("MissingPermission")
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Set initial camera position (centered on a default location, e.g., Paris)
-        LatLng defaultLocation = new LatLng(48.8566, 2.3522); // Paris
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, 10));
 
-        // Add a click listener to place a marker
+            mMap.setMyLocationEnabled(true);
+
+            // Get the current location and move the camera
+            fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+                if (location != null) {
+                    LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15));
+                } else {
+                    // Handle case where location is null
+                    Toast.makeText(getContext(), "Unable to fetch location!", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+        // Set click listener for map
         mMap.setOnMapClickListener(latLng -> {
             // Clear previous markers
             mMap.clear();
@@ -92,10 +120,47 @@ public class GalleryFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
+    }
+
+    private void showSmsPopup() {
+        // Create a popup dialog
+        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getContext());
+        View popupView = getLayoutInflater().inflate(R.layout.dialog_send_sms, null);
+        dialogBuilder.setView(popupView);
+
+        // Initialize dialog components
+        EditText phoneNumberInput = popupView.findViewById(R.id.input_phone_number);
+        Button sendButton = popupView.findViewById(R.id.btn_send_sms_popup);
+        Button cancelButton = popupView.findViewById(R.id.btn_cancel_sms);
+
+        AlertDialog dialog = dialogBuilder.create();
+        dialog.show();
+
+        sendButton.setOnClickListener(v -> {
+            String phoneNumber = phoneNumberInput.getText().toString();
+            if (!phoneNumber.isEmpty()) {
+                sendSms(phoneNumber);
+                dialog.dismiss();
+            } else {
+                Toast.makeText(getContext(), "Please enter a phone number!", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
+    }
+    private void sendSms(String phoneNumber) {
+        try {
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(phoneNumber, null, "FINDFRIENDS: Envoyer moi votre position", null, null);
+            Toast.makeText(getContext(), "SMS sent successfully!", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Failed to send SMS. Please try again.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     // AsyncTask for adding a position
@@ -122,14 +187,20 @@ public class GalleryFragment extends Fragment implements OnMapReadyCallback {
 
         @Override
         protected JSONObject doInBackground(Void... voids) {
-            JSONParser parser = new JSONParser();
-            HashMap<String, String> params = new HashMap<>();
-            params.put("pseudo", pseudo);
-            params.put("latitude", latitude);
-            params.put("longitude", longitude);
+            try {
+                JSONParser parser = new JSONParser();
+                HashMap<String, String> params = new HashMap<>();
+                params.put("pseudo", pseudo);
+                params.put("latitude", latitude);
+                params.put("longitude", longitude);
 
-            return parser.makeHttpRequest(Config.Url_AddPosition, "POST", params);
+                return parser.makeHttpRequest(Config.Url_AddPosition, "POST", params);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null; // Retourne null en cas d'échec
+            }
         }
+
 
         @Override
         protected void onPostExecute(JSONObject result) {
